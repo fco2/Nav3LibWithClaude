@@ -24,14 +24,27 @@ interface NavigationManager {
 
     fun getCurrentRouteFlow(): StateFlow<NavigationRoute?>
 
-    val backStack: SnapshotStateList<NavigationRoute>
+    val backStack: SnapshotStateList<NavigationRoute?>
+
+    fun canNavigateBack(): Boolean
+    fun shouldExitApp(): Boolean
 }
 
 class NavigationManagerImpl @Inject constructor() : NavigationManager {
-    private val _backStack = mutableStateListOf<NavigationRoute>(NavigationRoute.HumanScreenRoute())
-    override val backStack: SnapshotStateList<NavigationRoute> = _backStack
+    private val _backStack = mutableStateListOf<NavigationRoute?>()
+    override val backStack: SnapshotStateList<NavigationRoute?> = _backStack
+    override fun canNavigateBack(): Boolean {
+        return backStack.size > 1
+    }
+
+    override fun shouldExitApp(): Boolean {
+        return backStack.size <= 1
+    }
+
     private val _currentRoute = MutableStateFlow<NavigationRoute?>(null)
     val currentRoute: StateFlow<NavigationRoute?> = _currentRoute.asStateFlow()
+
+    private var isInitialized = false
     override fun navigateTo(route: NavigationRoute) {
         _backStack.add(route)
         _currentRoute.value = route
@@ -43,13 +56,16 @@ class NavigationManagerImpl @Inject constructor() : NavigationManager {
             val previous = _backStack.lastOrNull()
             _currentRoute.value = previous
             return previous
-        } else { return null }// TODO: check for possible bugs
+        } else { return null }
     }
     override fun getCurrentRoute(): NavigationRoute? = _backStack.lastOrNull()
+
     override fun initializeWithRoot(route: NavigationRoute) {
-        if (_backStack.isEmpty()) {
+        if (!isInitialized) {
+            _backStack.clear()
             _backStack.add(route)
             _currentRoute.value = route
+            isInitialized = true
         }
     }
 

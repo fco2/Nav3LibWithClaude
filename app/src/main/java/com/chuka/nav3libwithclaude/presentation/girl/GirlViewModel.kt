@@ -1,10 +1,13 @@
 package com.chuka.nav3libwithclaude.presentation.girl
 
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chuka.nav3libwithclaude.domain.models.Human
 import com.chuka.nav3libwithclaude.domain.models.ToastData
 import com.chuka.nav3libwithclaude.domain.repositories.HumanRepository
+import com.chuka.nav3libwithclaude.presentation.girl.GirlUiState
 import com.chuka.nav3libwithclaude.presentation.navigation.NavigationManager
 import com.chuka.nav3libwithclaude.presentation.navigation.NavigationRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,23 +23,26 @@ class GirlViewModel @Inject constructor(
     private val navigationManager: NavigationManager
 ): ViewModel(){
 
-    private val _currentHuman = MutableStateFlow(Human())
-    val currentHuman = _currentHuman.asStateFlow()
-    val backStack = navigationManager.backStack
+    private val _girlUiState = MutableStateFlow<GirlUiState>(GirlUiState())
+    val girlUiState = _girlUiState.asStateFlow()
 
     init {
-        getCurrentHuman()
+        getHumanGirl()
     }
 
-    private fun getCurrentHuman() {
+    private fun getHumanGirl() {
         viewModelScope.launch {
             navigationManager.getCurrentRouteFlow().collect { route ->
-                if (route is NavigationRoute.GirlScreenRoute) {
-                    route.humanId?.let { id ->
-                        // we should normally null check here
-                        _currentHuman.value = repository.getHumanById(id).first()
+                (route as? NavigationRoute.GirlScreenRoute)?.let { nonNullRoute ->
+                    nonNullRoute.humanId?.let { id ->
+                        val human = repository.getHumanById(id).first()
+                        _girlUiState.value = _girlUiState.value.copy(
+                            currentHuman = human,
+                            currentBackStack = navigationManager.backStack,
+                            isLoading = false,
+                            ageMates = emptyList()
+                        )
                     }
-
                 }
             }
         }
@@ -46,20 +52,12 @@ class GirlViewModel @Inject constructor(
         navigationManager.navigateTo(route)
     }
 
-    fun navigateToGirlScreen(humanId: Long) {
-        navigationManager.navigateTo(NavigationRoute.GirlScreenRoute(humanId))
-    }
-
-    fun navigateToBoyScreen(humanId: Long) {
-        navigationManager.navigateTo(NavigationRoute.BoyScreenRoute(humanId))
-    }
-
     fun navigateToHumanScreen() {
         // Activate Toast showing we specified navigating to Human screen
         navigationManager.navigateTo(NavigationRoute.HumanScreenRoute(
             fromScreen = NavigationRoute.GirlScreenRoute.ROUTE,
             toastData = ToastData(
-                message = "Navigating from Girl: ${currentHuman.value.name} to Human",
+                message = "Navigating from Girl: ${_girlUiState.value.currentHuman.name} to Human",
                 duration = ToastData.LENGTH_LONG,
                 backgroundColor = android.R.color.darker_gray.toLong()
             )
@@ -69,4 +67,26 @@ class GirlViewModel @Inject constructor(
     fun navigateBack() {
         navigationManager.navigateBack()
     }
+
+    fun showAgeMates() {
+        _girlUiState.value = _girlUiState.value.copy(
+            isLoading = true
+        )
+        viewModelScope.launch {
+            val ageMates = repository.getHumansBetweenAgeRange(
+                age = girlUiState.value.currentHuman.age ?: 0
+            ).first().filterNot { it.id == girlUiState.value.currentHuman.id } // exclude yourself
+            _girlUiState.value = _girlUiState.value.copy(
+                ageMates = ageMates,
+                isLoading = false
+            )
+        }
+    }
 }
+
+data class GirlUiState(
+    val currentHuman: Human = Human(),
+    val currentBackStack: SnapshotStateList<NavigationRoute?> = emptyList<NavigationRoute?>().toMutableStateList(),
+    val isLoading: Boolean = false,
+    val ageMates: List<Human> = emptyList()
+)

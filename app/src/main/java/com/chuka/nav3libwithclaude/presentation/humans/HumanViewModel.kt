@@ -27,7 +27,7 @@ class HumanViewModel @Inject constructor(
     val uiState: StateFlow<HumanUiState> = _uiState.asStateFlow()
 
     val humans = repository.getAllHumans()
-    val backStack: SnapshotStateList<NavigationRoute> = navigationManager.backStack
+    val backStack: SnapshotStateList<NavigationRoute?> = navigationManager.backStack
     val currentRoute = navigationManager.getCurrentRouteFlow()
 
     init {
@@ -62,7 +62,13 @@ class HumanViewModel @Inject constructor(
     }
 
     fun navigateBack() {
-        navigationManager.navigateBack()
+        val previousRoute = navigationManager.navigateBack()
+        if (previousRoute == null && navigationManager.shouldExitApp())
+        {
+            // Could emit an event here to close the app
+            // For now, we'll just stay on the current screen
+            _uiState.value = _uiState.value.copy(shouldExitApp = ShouldExitApp.YES)
+        }
     }
 
     fun processToastData(toastData: ToastData?) {
@@ -100,5 +106,11 @@ private fun buildSeedHumanData(): List<Human> = listOf(
 data class HumanUiState(
     val toastMessage: String? = null,
     val toastBackgroundColor: Long? = null,
-    val toastLength: Int = ToastData.LENGTH_SHORT
+    val toastLength: Int = ToastData.LENGTH_SHORT,
+    val shouldExitApp: ShouldExitApp = ShouldExitApp.NO
 )
+
+enum class ShouldExitApp {
+    YES,
+    NO
+}

@@ -16,7 +16,8 @@ import com.chuka.nav3libwithclaude.presentation.humans.HumanViewModel
 @Composable
 fun CustomNavDisplay(
     navigationManager: NavigationManager,
-    startDestination: NavigationRoute = NavigationRoute.HumanScreenRoute()
+    startDestination: NavigationRoute = NavigationRoute.HumanScreenRoute(),
+    onExitApp: () -> Unit,
 ) {
     // Implement your custom navigation display here
     val context = LocalContext.current
@@ -38,7 +39,8 @@ fun CustomNavDisplay(
             HumanScreen(
                 viewModel = viewModel,
                 onNavigate = { navigationRoute -> viewModel.navigateTo(navigationRoute) },
-                onBackPressed = { viewModel.navigateBack() }
+                onBackPressed = { viewModel.navigateBack() },
+                onExitApp = onExitApp
             )
         }
         is NavigationRoute.BoyScreenRoute -> {
@@ -47,8 +49,11 @@ fun CustomNavDisplay(
             BoyScreen(
                 viewModel = viewModel,
                 selectedHumanId = route.humanId,
-                onNavigateToHumanScreen = { fromScreen, toastData -> viewModel.navigateTo(NavigationRoute.HumanScreenRoute(fromScreen, toastData)) },
+                onNavigateToHumanScreen = { fromScreen, toastData ->
+                    viewModel.navigateTo(NavigationRoute.HumanScreenRoute(fromScreen, toastData))
+                },
                 onNavigateToGirlScreen = { humanId -> viewModel.navigateTo(NavigationRoute.GirlScreenRoute(humanId)) },
+                onNavigateToBoyScreen = { humanId -> viewModel.navigateTo(NavigationRoute.BoyScreenRoute(humanId)) },
                 onNavigateBack = { viewModel.navigateBack() }
             )
         }
@@ -59,14 +64,13 @@ fun CustomNavDisplay(
                 selectedHumanId = route.humanId,
                 onNavigateToHumanScreen = { fromScreen, toastData -> viewModel.navigateTo(NavigationRoute.HumanScreenRoute(fromScreen, toastData)) },
                 onNavigateToBoyScreen = { humanId -> viewModel.navigateTo(NavigationRoute.BoyScreenRoute(humanId)) },
+                onNavigateToGirlScreen = { humanId -> viewModel.navigateTo(NavigationRoute.GirlScreenRoute(humanId)) },
                 onNavigateBack = { viewModel.navigateBack() }
             )
         }
         null -> {
-            // Fallback to default screen
-            LaunchedEffect(Unit) {
-                navigationManager.navigateTo(startDestination)
-            }
+            // Fallback to default screen - but initialization should handle this
+            // The initializeWithRoot call above should prevent this case
         }
     }
 }

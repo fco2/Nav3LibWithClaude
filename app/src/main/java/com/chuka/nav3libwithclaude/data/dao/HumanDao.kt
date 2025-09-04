@@ -32,4 +32,7 @@ interface HumanDao {
 
     @Query("DELETE FROM humans")
     suspend fun deleteAllHumans()
+
+    @Query("SELECT * FROM humans WHERE age BETWEEN :minAge AND :maxAge")
+    fun getHumansBetweenAgeRange(minAge: Int, maxAge: Int): Flow<List<HumanEntity>>
 }

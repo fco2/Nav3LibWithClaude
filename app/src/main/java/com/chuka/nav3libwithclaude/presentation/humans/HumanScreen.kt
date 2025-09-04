@@ -1,6 +1,5 @@
 package com.chuka.nav3libwithclaude.presentation.humans
 
-import android.widget.NumberPicker
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -29,7 +28,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -53,7 +51,8 @@ import com.chuka.nav3libwithclaude.presentation.util.rememberPickerState
 fun HumanScreen(
     viewModel: HumanViewModel = hiltViewModel(),
     onNavigate: (navigationRoute: NavigationRoute) -> Unit,
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    onExitApp: () -> Unit
 ) {
     val context = LocalContext.current
     val humans by viewModel.humans.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -79,6 +78,12 @@ fun HumanScreen(
             toast.show()
             // TODO: should we add a delay to clear toast only after it has shown for the length of time required
             viewModel.clearToast()
+        }
+    }
+
+    LaunchedEffect(uiState.shouldExitApp) {
+        if (uiState.shouldExitApp == ShouldExitApp.YES) {
+            onExitApp()
         }
     }
 
@@ -115,6 +120,7 @@ fun HumanScreen(
                             is NavigationRoute.HumanScreenRoute -> "Human(${it.fromScreen ?: "root"})"
                             is NavigationRoute.BoyScreenRoute -> "Boy${it.humanId?.let { id -> "($id)" } ?: ""}"
                             is NavigationRoute.GirlScreenRoute -> "Girl${it.humanId?.let { id -> "($id)" } ?: ""}"
+                            null -> "root"
                         }
                     }}",
                     style = MaterialTheme.typography.bodySmall,

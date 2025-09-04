@@ -22,6 +22,8 @@ interface HumanRepository {
     suspend fun deleteAllHumans()
 
     fun getHumanById(id: Long): Flow<Human>
+
+    fun getHumansBetweenAgeRange(age: Int): Flow<List<Human>>
 }
 
 class HumanRepositoryImpl @Inject constructor(private val humanDao: HumanDao) : HumanRepository{
@@ -55,5 +57,15 @@ class HumanRepositoryImpl @Inject constructor(private val humanDao: HumanDao) : 
 
     override fun getHumanById(id: Long): Flow<Human> {
         return humanDao.getHumanById(id).map { it.toHuman() }
+    }
+
+    override fun getHumansBetweenAgeRange(
+        age: Int
+    ): Flow<List<Human>> {
+        val minAge = age - 2
+        val maxAge = age + 2
+        return humanDao.getHumansBetweenAgeRange(minAge, maxAge).map { humans ->
+            humans.map { it.toHuman() }
+        }
     }
 }

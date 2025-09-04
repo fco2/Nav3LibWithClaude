@@ -1,5 +1,7 @@
 package com.chuka.nav3libwithclaude.presentation.boy
 
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chuka.nav3libwithclaude.domain.models.Human
@@ -19,8 +21,9 @@ class BoyViewModel @Inject constructor(
     private val repository: HumanRepository,
     private val navigationManager: NavigationManager
 ) : ViewModel(){
-    private val _currentHuman = MutableStateFlow<Human>(Human())
-    val currentHuman = _currentHuman.asStateFlow()
+    private val _boyUiState = MutableStateFlow<BoyUiState>(BoyUiState())
+    val boyUiState = _boyUiState.asStateFlow()
+
     val currentBackStack = navigationManager.backStack
 
     init { getHumanBoy() }
@@ -28,9 +31,15 @@ class BoyViewModel @Inject constructor(
     private fun getHumanBoy() {
         viewModelScope.launch {
             navigationManager.getCurrentRouteFlow().collect { route ->
-                if (route is NavigationRoute.BoyScreenRoute) {
-                    route.humanId?.let { id ->
-                        _currentHuman.value = repository.getHumanById(id).first()
+                (route as? NavigationRoute.BoyScreenRoute)?.let { nonNullRoute ->
+                    nonNullRoute.humanId?.let { id ->
+                        val human = repository.getHumanById(id).first()
+                        _boyUiState.value = _boyUiState.value.copy(
+                            currentHuman = human,
+                            currentBackStack = navigationManager.backStack,
+                            isLoading = false,
+                            ageMates = emptyList()
+                        )
                     }
                 }
             }
@@ -40,12 +49,28 @@ class BoyViewModel @Inject constructor(
     fun navigateTo(route: NavigationRoute) {
         navigationManager.navigateTo(route)
     }
+
+    fun showAgeMates() {
+        _boyUiState.value = _boyUiState.value.copy(
+            isLoading = true
+        )
+        viewModelScope.launch {
+            val ageMates = repository.getHumansBetweenAgeRange(
+                age =boyUiState.value.currentHuman.age ?: 0
+            ).first().filterNot { it.id == boyUiState.value.currentHuman.id } // exclude yourself
+            _boyUiState.value = _boyUiState.value.copy(
+                ageMates = ageMates,
+                isLoading = false
+            )
+        }
+    }
+
     fun navigateToHumanScreen() {
         // Activate Toast showing we specified navigating to Human screen
         navigationManager.navigateTo(NavigationRoute.HumanScreenRoute(
             fromScreen = NavigationRoute.BoyScreenRoute.ROUTE,
             toastData = ToastData(
-                message = "Navigating from Boy: ${currentHuman.value.name} to Human",
+                message = "Navigating from Boy: ${boyUiState.value.currentHuman.name} to Human",
                 duration = ToastData.LENGTH_LONG,
                 backgroundColor = android.R.color.holo_blue_light.toLong()
             )
@@ -67,3 +92,10 @@ class BoyViewModel @Inject constructor(
 
 
 }
+
+data class BoyUiState(
+    val currentHuman: Human = Human(),
+    val currentBackStack: SnapshotStateList<NavigationRoute?> = emptyList<NavigationRoute?>().toMutableStateList(),
+    val isLoading: Boolean = false,
+    val ageMates: List<Human> = emptyList()
+)
