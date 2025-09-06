@@ -9,6 +9,7 @@ import com.chuka.nav3libwithclaude.domain.models.ToastData
 import com.chuka.nav3libwithclaude.domain.repositories.HumanRepository
 import com.chuka.nav3libwithclaude.presentation.navigation.NavigationManager
 import com.chuka.nav3libwithclaude.presentation.navigation.NavigationRoute
+import com.chuka.nav3libwithclaude.presentation.navigation.NavigationTransition
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,8 +58,8 @@ class HumanViewModel @Inject constructor(
         }
     }
 
-    fun navigateTo(route: NavigationRoute) {
-        navigationManager.navigateTo(route)
+    fun navigateTo(route: NavigationRoute, transition: NavigationTransition = NavigationTransition()) {
+        navigationManager.navigateTo(route, transition)
     }
 
     fun navigateBack() {

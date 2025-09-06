@@ -10,6 +10,7 @@ import com.chuka.nav3libwithclaude.domain.repositories.HumanRepository
 import com.chuka.nav3libwithclaude.presentation.girl.GirlUiState
 import com.chuka.nav3libwithclaude.presentation.navigation.NavigationManager
 import com.chuka.nav3libwithclaude.presentation.navigation.NavigationRoute
+import com.chuka.nav3libwithclaude.presentation.navigation.NavigationTransition
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,8 +49,8 @@ class GirlViewModel @Inject constructor(
         }
     }
 
-    fun navigateTo(route: NavigationRoute) {
-        navigationManager.navigateTo(route)
+    fun navigateTo(route: NavigationRoute, navigationTransition: NavigationTransition) {
+        navigationManager.navigateTo(route, navigationTransition)
     }
 
     fun navigateToHumanScreen() {
