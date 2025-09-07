@@ -42,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -60,6 +61,7 @@ import com.chuka.nav3libwithclaude.presentation.navigation.NotificationHelper
 import com.chuka.nav3libwithclaude.presentation.navigation.NotificationHelperProvider
 import com.chuka.nav3libwithclaude.presentation.navigation.NotificationPermissionHandler
 import com.chuka.nav3libwithclaude.presentation.navigation.NotificationPermissionProvider
+import com.chuka.nav3libwithclaude.presentation.util.BackStackInfoComposable
 import com.chuka.nav3libwithclaude.presentation.util.Picker
 import com.chuka.nav3libwithclaude.presentation.util.PickerState
 import com.chuka.nav3libwithclaude.presentation.util.rememberPickerState
@@ -136,37 +138,7 @@ fun HumanScreen(
                 .padding(16.dp)
         ) {
             // Header with navigation info
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Human Screen",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-
-                    Text(
-                        text = "Back Stack Size: ${backStack.size}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-
-                    Text(
-                        text = "Back Stack: ${backStack.joinToString(" → ") {
-                            when(it) {
-                                is NavigationRoute.HumanScreenRoute -> "All Humans(${it.fromScreen ?: "root"})"
-                                is NavigationRoute.BoyScreenRoute -> "Boy${it.humanId?.let { id -> "($id)" } ?: ""}"
-                                is NavigationRoute.GirlScreenRoute -> "Girl${it.humanId?.let { id -> "($id)" } ?: ""}"
-                                null -> "root"
-                            }
-                        }}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
+            BackStackInfoComposable(backStack)
 
             Spacer(modifier = Modifier.height(16.dp))
 

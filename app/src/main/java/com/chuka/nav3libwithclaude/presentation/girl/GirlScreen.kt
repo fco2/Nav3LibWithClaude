@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chuka.nav3libwithclaude.domain.models.HumanType
 import com.chuka.nav3libwithclaude.domain.models.ToastData
 import com.chuka.nav3libwithclaude.presentation.navigation.NavigationRoute
+import com.chuka.nav3libwithclaude.presentation.util.BackStackInfoComposable
 import com.chuka.nav3libwithclaude.presentation.util.HasAgeMates
 
 @Composable
@@ -57,37 +58,7 @@ fun GirlScreen(
             .padding(16.dp)
     ) {
         // Header with navigation info
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Human Screen",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-
-                Text(
-                    text = "Back Stack Size: ${girlUIState.currentBackStack.size}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-
-                Text(
-                    text = "Back Stack: ${girlUIState.currentBackStack.joinToString(" → ") {
-                        when(it) {
-                            is NavigationRoute.HumanScreenRoute -> "Human(${it.fromScreen ?: "root"})"
-                            is NavigationRoute.BoyScreenRoute -> "Boy${it.humanId?.let { id -> "($id)" } ?: ""}"
-                            is NavigationRoute.GirlScreenRoute -> "Girl${it.humanId?.let { id -> "($id)" } ?: ""}"
-                            null -> "root"
-                        }
-                    }}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-        }
+        BackStackInfoComposable(girlUIState.currentBackStack)
 
         // Top bar
         Column(modifier = Modifier.fillMaxWidth()) {
