@@ -26,7 +26,8 @@ object AppModule {
             context,
             HumanDatabase::class.java,
             "human_database"
-        ).build()
+        ).addMigrations(HumanDatabase.MIGRATION_1_2)
+            .build()
     }
 
     @Provides

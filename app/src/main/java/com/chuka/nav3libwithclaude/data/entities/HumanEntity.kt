@@ -14,17 +14,16 @@ data class HumanEntity(
     @PrimaryKey val id: Long? = null,
     val name: String? = null,
     val age: Int? = null,
-    val gender: HumanType? = null
+    val gender: HumanType? = null,
+    val rank: Int = 0
 ) : Parcelable {
     fun toHuman(): Human {
         return Human(
             id = id,
             name = name,
             age = age,
-            gender = gender
+            gender = gender,
+            rank = rank
         )
     }
 }
-
-
-// View age mates, horizontal LazyColumn of other Humans, Boy or Girl with similar age (within +1 or -1)

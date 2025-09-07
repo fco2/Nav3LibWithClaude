@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface HumanDao {
-    @Query("SELECT * FROM humans")
+    @Query("SELECT * FROM humans ORDER BY rank DESC")
     fun getAllHumans(): Flow<List<HumanEntity>>
 
     @Query("SELECT * FROM humans WHERE id = :id")
@@ -35,4 +35,7 @@ interface HumanDao {
 
     @Query("SELECT * FROM humans WHERE age BETWEEN :minAge AND :maxAge")
     fun getHumansBetweenAgeRange(minAge: Int, maxAge: Int): Flow<List<HumanEntity>>
+
+    @Query("SELECT COALESCE(MAX(rank), 0) FROM humans")
+    suspend fun getHighestRank(): Int
 }

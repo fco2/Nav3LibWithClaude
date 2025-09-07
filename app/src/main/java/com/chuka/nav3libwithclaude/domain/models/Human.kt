@@ -9,14 +9,16 @@ data class Human(
     val id: Long? = null,
     val name: String? = null,
     val age: Int? = null,
-    val gender: HumanType? = null
+    val gender: HumanType? = null,
+    val rank: Int = 0
 ) : Parcelable {
     fun toHumanEntity(): HumanEntity {
         return HumanEntity(
             id = id,
             name = name,
             age = age,
-            gender = gender
+            gender = gender,
+            rank = rank
         )
     }
 }
