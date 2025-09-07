@@ -1,8 +1,10 @@
 package com.chuka.nav3libwithclaude.presentation.girl
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chuka.nav3libwithclaude.domain.models.HumanType
 import com.chuka.nav3libwithclaude.domain.models.ToastData
 import com.chuka.nav3libwithclaude.presentation.navigation.NavigationRoute
+import com.chuka.nav3libwithclaude.presentation.util.HasAgeMates
 
 @Composable
 fun GirlScreen(
@@ -54,56 +56,65 @@ fun GirlScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Human Screen",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+        // Header with navigation info
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Human Screen",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
 
-            Text(
-                text = "Back Stack Size: ${girlUIState.currentBackStack.size}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+                Text(
+                    text = "Back Stack Size: ${girlUIState.currentBackStack.size}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
 
-            Text(
-                text = "Back Stack: ${girlUIState.currentBackStack.joinToString(" → ") {
-                    when(it) {
-                        is NavigationRoute.HumanScreenRoute -> "Human(${it.fromScreen ?: "root"})"
-                        is NavigationRoute.BoyScreenRoute -> "Boy${it.humanId?.let { id -> "($id)" } ?: ""}"
-                        is NavigationRoute.GirlScreenRoute -> "Girl${it.humanId?.let { id -> "($id)" } ?: ""}"
-                        null -> "root"
-                    }
-                }}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+                Text(
+                    text = "Back Stack: ${girlUIState.currentBackStack.joinToString(" → ") {
+                        when(it) {
+                            is NavigationRoute.HumanScreenRoute -> "Human(${it.fromScreen ?: "root"})"
+                            is NavigationRoute.BoyScreenRoute -> "Boy${it.humanId?.let { id -> "($id)" } ?: ""}"
+                            is NavigationRoute.GirlScreenRoute -> "Girl${it.humanId?.let { id -> "($id)" } ?: ""}"
+                            null -> "root"
+                        }
+                    }}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
         }
 
         // Top bar
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
-
-            Text(
-                text = "Girl Screen${selectedHumanId?.let { " (Viewing ID: $it)" } ?: ""}",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.weight(1f)
-            )
-
+        Column(modifier = Modifier.fillMaxWidth()) {
             Button(onClick = {
                 onNavigateToHumanScreen("Girl Screen", ToastData("From Girl Screen",
                     ToastData.LENGTH_LONG, 0xFFF1F1F1
                 ))
-            }) {
+            },
+                modifier = Modifier.align(Alignment.End)) {
                 Text("Back to Human Screen")
             }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+
+                Text(
+                    text = "Girl Screen${selectedHumanId?.let { " (Viewing ID: $it)" } ?: ""}",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
+
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -149,36 +160,52 @@ fun GirlScreen(
             Text(text = "Show Age Mates")
         }
 
-        LazyColumn {
-            items(girlUIState.ageMates) { mate ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                        .clickable {
-                            when (mate.gender) {
-                                HumanType.BOY -> onNavigateToBoyScreen(mate.id)
-                                HumanType.GIRL -> onNavigateToGirlScreen(mate.id)
-                                else -> onNavigateToBoyScreen(mate.id) // default
-                            }
-                        },
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                    )
-                ) {
-                    Column(
+        if (girlUIState.hasAgeMates == HasAgeMates.NO) {
+            Text(
+                text = "No age mates found",
+                modifier = Modifier.padding(16.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error
+            )
+        } else if (girlUIState.hasAgeMates == HasAgeMates.YES) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+                contentPadding = PaddingValues(16.dp)
+            ) {
+                items(girlUIState.ageMates) { mate ->
+                    Card(
                         modifier = Modifier
-                            .padding(16.dp)
                             .fillMaxWidth()
+                            .padding(8.dp)
+                            .clickable {
+                                when (mate.gender) {
+                                    HumanType.BOY -> onNavigateToBoyScreen(mate.id)
+                                    HumanType.GIRL -> onNavigateToGirlScreen(mate.id)
+                                    else -> onNavigateToBoyScreen(mate.id) // default
+                                }
+                            },
+                        colors = CardDefaults.cardColors(
+                            containerColor = when(mate.gender) {
+                                HumanType.BOY -> MaterialTheme.colorScheme.secondaryContainer
+                                HumanType.GIRL -> MaterialTheme.colorScheme.tertiaryContainer
+                                else -> MaterialTheme.colorScheme.primaryContainer
+                            }
+                        )
                     ) {
-                        Text(
-                            text = mate.name ?: "Unknown",
-                            style = MaterialTheme.typography.headlineSmall
-                        )
-                        Text(
-                            text = mate.age.toString(),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Column(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth()
+                        ) {
+                            Text(
+                                text = mate.name ?: "Unknown",
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+                            Text(
+                                text = mate.age.toString(),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                     }
                 }
             }

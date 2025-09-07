@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -175,7 +175,9 @@ fun HumanScreen(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
             ) {
-                Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+                Column(modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -204,7 +206,11 @@ fun HumanScreen(
                     Button(
                         onClick = {
                             handleNotificationWithPermission {
-                                val notificationHelper = NotificationHelper(context, DeepLinkHandler(), NotificationPermissionHandler())
+                                val notificationHelper = NotificationHelper(
+                                    context,
+                                    DeepLinkHandler(),
+                                    NotificationPermissionHandler()
+                                )
                                 notificationHelper.showGeneralNotification {
                                     Toast.makeText(context, "Notification permission denied", Toast.LENGTH_SHORT).show()
                                 }
@@ -241,7 +247,7 @@ fun HumanScreen(
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(humans) { human ->
+                itemsIndexed(humans) { index, human ->
                     val route = when (human.gender) {
                         HumanType.BOY -> NavigationRoute.BoyScreenRoute(human.id)
                         HumanType.GIRL -> NavigationRoute.GirlScreenRoute(human.id)
@@ -268,6 +274,9 @@ fun HumanScreen(
                             }
                         }
                     )
+                    if (index == humans.lastIndex) {
+                        Spacer(modifier = Modifier.height(32.dp))
+                    }
                 }
             }
         }
@@ -285,19 +294,27 @@ fun HumanScreen(
             showPermissionDialog = pair.second
         }
 
-
         // Add Human Dialog
         if (showAddDialog) {
             val values = remember { (1..99).toList() }
             val valuesPickerState: PickerState = rememberPickerState()
 
-            showAddDialog = addHumanDialog(
-                showAddDialog,
+            AddHumanDialog(
                 newHumanName,
+                { newHumanName = it },
                 valuesPickerState,
                 values,
                 selectedType,
-                viewModel
+                { selectedType = it },
+                { showAddDialog = false },
+                { name, age, type ->
+                    if (name.isNotBlank()) {
+                        val newHuman = Human(name = name, age = age, gender = type)
+                        viewModel.addHuman(newHuman)
+                        newHumanName = ""
+                        showAddDialog = false
+                    }
+                }
             )
         }
         // Add Human button
@@ -380,25 +397,24 @@ private fun requestPermissionDialog(
 }
 
 @Composable
-private fun addHumanDialog(
-    showAddDialog: Boolean,
+private fun AddHumanDialog(
     newHumanName: String,
+    onNameChange: (String) -> Unit,
     valuesPickerState: PickerState,
     values: List<Int>,
     selectedType: HumanType,
-    viewModel: HumanViewModel
-): Boolean {
-    var showAddDialog1 = showAddDialog
-    var newHumanName1 = newHumanName
-    var selectedType1 = selectedType
+    onTypeChange: (HumanType) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: (String, Int, HumanType) -> Unit
+) {
     AlertDialog(
-        onDismissRequest = { showAddDialog1 = false },
+        onDismissRequest = { onDismiss() },
         title = { Text("Add New Human") },
         text = {
             Column {
                 OutlinedTextField(
-                    value = newHumanName1,
-                    onValueChange = { newHumanName1 = it },
+                    value = newHumanName,
+                    onValueChange = onNameChange,
                     label = { Text("Name") },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -430,16 +446,16 @@ private fun addHumanDialog(
                 Text("Type:")
                 Row {
                     RadioButton(
-                        selected = selectedType1 == HumanType.BOY,
-                        onClick = { selectedType1 = HumanType.BOY }
+                        selected = selectedType == HumanType.BOY,
+                        onClick = { onTypeChange(HumanType.BOY) }
                     )
                     Text("Boy", modifier = Modifier.padding(start = 8.dp))
 
                     Spacer(modifier = Modifier.width(16.dp))
 
                     RadioButton(
-                        selected = selectedType1 == HumanType.GIRL,
-                        onClick = { selectedType1 = HumanType.GIRL }
+                        selected = selectedType == HumanType.GIRL,
+                        onClick = { onTypeChange(HumanType.GIRL) }
                     )
                     Text("Girl", modifier = Modifier.padding(start = 8.dp))
                 }
@@ -448,26 +464,18 @@ private fun addHumanDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    if (newHumanName1.isNotBlank()) {
-                        val selectedAge = (valuesPickerState.selectedItem as? Int) ?: 1
-                        val newHuman =
-                            Human(name = newHumanName1, age = selectedAge, gender = selectedType1)
-                        viewModel.addHuman(newHuman)
-                        newHumanName1 = ""
-                        showAddDialog1 = false
-                    }
+                    onConfirm(newHumanName, (valuesPickerState.selectedItem as? Int) ?: 1, selectedType)
                 }
             ) {
                 Text("Add")
             }
         },
         dismissButton = {
-            TextButton(onClick = { showAddDialog1 = false }) {
+            TextButton(onClick = { onDismiss() }) {
                 Text("Cancel")
             }
         }
     )
-    return showAddDialog1
 }
 
 @Composable

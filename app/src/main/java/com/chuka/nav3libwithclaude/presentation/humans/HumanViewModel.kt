@@ -47,7 +47,7 @@ class HumanViewModel @Inject constructor(
             repository.insertHuman(human)
             _uiState.value = _uiState.value.copy(
                 toastMessage = "Human added successfully",
-                toastBackgroundColor = 0xFF00FF00.toLong(),
+                toastBackgroundColor = 0xFF00FF00,
             )
         }
     }

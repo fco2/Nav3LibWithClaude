@@ -75,26 +75,28 @@ fun BoyScreen(
             }
         }
         // Top bar
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
-
-            Text(
-                text = "Boy Screen${selectedHumanId?.let { " (Viewing ID: $it)" } ?: ""}",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.weight(1f)
-            )
-
+        Column(modifier = Modifier.fillMaxWidth()) {
             Button(onClick = {
                 onNavigateToHumanScreen("Boy Screen", ToastData("From Boy Screen",
                     ToastData.LENGTH_LONG, 0xFFF1F1F1
                 ))
-            }) {
+            },
+                modifier = Modifier.align(Alignment.End)) {
                 Text("Back to Human Screen")
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+
+                Text(
+                    text = "Boy Screen${selectedHumanId?.let { " (Viewing ID: $it)" } ?: ""}",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
 
@@ -104,7 +106,7 @@ fun BoyScreen(
         boyUiState.currentHuman.let { human ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -165,9 +167,12 @@ fun BoyScreen(
                                 }
                             },
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                        )
-                    ) {
+                            containerColor = when(mate.gender) {
+                                HumanType.BOY -> MaterialTheme.colorScheme.secondaryContainer
+                                HumanType.GIRL -> MaterialTheme.colorScheme.tertiaryContainer
+                                else -> MaterialTheme.colorScheme.primaryContainer
+                            }
+                    )) {
                         Column(
                             modifier = Modifier
                                 .padding(16.dp)

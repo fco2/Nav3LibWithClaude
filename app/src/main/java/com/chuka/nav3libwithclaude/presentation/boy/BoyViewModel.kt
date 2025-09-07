@@ -38,7 +38,8 @@ class BoyViewModel @Inject constructor(
                             currentHuman = human,
                             currentBackStack = navigationManager.backStack,
                             isLoading = false,
-                            ageMates = emptyList()
+                            ageMates = emptyList(),
+                            hasAgeMates = HasAgeMates.NOT_AVAILABLE
                         )
                     }
                 }

@@ -2,7 +2,6 @@ package com.chuka.nav3libwithclaude.domain.models
 
 import android.os.Parcelable
 import com.chuka.nav3libwithclaude.data.entities.HumanEntity
-import com.chuka.nav3libwithclaude.domain.models.HumanType
 import kotlinx.parcelize.Parcelize
 
 @Parcelize

@@ -11,6 +11,7 @@ import com.chuka.nav3libwithclaude.presentation.girl.GirlUiState
 import com.chuka.nav3libwithclaude.presentation.navigation.NavigationManager
 import com.chuka.nav3libwithclaude.presentation.navigation.NavigationRoute
 import com.chuka.nav3libwithclaude.presentation.navigation.NavigationTransition
+import com.chuka.nav3libwithclaude.presentation.util.HasAgeMates
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,7 +42,8 @@ class GirlViewModel @Inject constructor(
                             currentHuman = human,
                             currentBackStack = navigationManager.backStack,
                             isLoading = false,
-                            ageMates = emptyList()
+                            ageMates = emptyList(),
+                            hasAgeMates = HasAgeMates.NOT_AVAILABLE
                         )
                     }
                 }
@@ -79,7 +81,8 @@ class GirlViewModel @Inject constructor(
             ).first().filterNot { it.id == girlUiState.value.currentHuman.id } // exclude yourself
             _girlUiState.value = _girlUiState.value.copy(
                 ageMates = ageMates,
-                isLoading = false
+                isLoading = false,
+                hasAgeMates = if (ageMates.isNotEmpty()) HasAgeMates.YES else HasAgeMates.NO
             )
         }
     }
@@ -89,5 +92,6 @@ data class GirlUiState(
     val currentHuman: Human = Human(),
     val currentBackStack: SnapshotStateList<NavigationRoute?> = emptyList<NavigationRoute?>().toMutableStateList(),
     val isLoading: Boolean = false,
-    val ageMates: List<Human> = emptyList()
+    val ageMates: List<Human> = emptyList(),
+    val hasAgeMates: HasAgeMates = HasAgeMates.NOT_AVAILABLE
 )
