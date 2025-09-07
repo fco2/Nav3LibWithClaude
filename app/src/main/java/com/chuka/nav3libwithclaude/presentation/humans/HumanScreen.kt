@@ -468,14 +468,12 @@ fun HumanItem(
 ) {
     Card(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .fillMaxWidth(),
         onClick = { onHumanClick() }
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+                .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
@@ -485,7 +483,7 @@ fun HumanItem(
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
-                        .width(20.dp)
+                        .width(30.dp)
                         .padding(horizontal = 1.dp, vertical = 1.dp)
                         .clip(RoundedCornerShape(4.dp))
                         .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
@@ -503,7 +501,10 @@ fun HumanItem(
                     // Grid pattern like Google Keep (3x6 dots)
                     Column(
                         verticalArrangement = Arrangement.spacedBy(4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 10.dp)
                     ) {
                         repeat(6) { rowIndex ->
                             Row(
