@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
 
         // Handle deep link from intent
         handleDeepLinkIntent(intent)
-        //enableEdgeToEdge()
+        enableEdgeToEdge()
         setContent {
             Nav3LibWithClaudeTheme {
                 Surface(
