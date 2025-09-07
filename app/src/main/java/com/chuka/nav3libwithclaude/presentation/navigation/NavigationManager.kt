@@ -51,6 +51,8 @@ interface NavigationManager {
 
     fun canNavigateBack(): Boolean
     fun shouldExitApp(): Boolean
+    // Deep linking support
+    fun handleDeepLink(route: NavigationRoute, transition: NavigationTransition = NavigationTransition())
 }
 
 class NavigationManagerImpl @Inject constructor() : NavigationManager {
@@ -67,7 +69,6 @@ class NavigationManagerImpl @Inject constructor() : NavigationManager {
     override fun shouldExitApp(): Boolean = backStack.size <= 1
     private val _currentRoute = MutableStateFlow<NavigationRoute?>(null)
     val currentRoute: StateFlow<NavigationRoute?> = _currentRoute.asStateFlow()
-    private var isInitialized = false
     override fun navigateTo(route: NavigationRoute, transition: NavigationTransition) {
         _isAnimating.value = true
         _navigationTransition.value = transition
@@ -106,15 +107,28 @@ class NavigationManagerImpl @Inject constructor() : NavigationManager {
            previous
         } else { null }
     }
+
+    override fun handleDeepLink(route: NavigationRoute, transition: NavigationTransition) {
+        // Clear back stack and navigate to deep link destination with special animation
+        _backStack.clear()
+        val deepLinkTransition = NavigationTransition(
+            enterAnimation = NavigationAnimation.SCALE,
+            exitAnimation = NavigationAnimation.FADE,
+            duration = 500
+        )
+
+        backStack.add(NavigationRoute.HumanScreenRoute())
+        if (route !is NavigationRoute.HumanScreenRoute) {
+            navigateTo(route, deepLinkTransition)
+        }
+    }
+
     override fun getCurrentRoute(): NavigationRoute? = _backStack.lastOrNull()
 
     override fun initializeWithRoot(route: NavigationRoute) {
-        if (!isInitialized) {
-            _backStack.clear()
-            _backStack.add(route)
-            _currentRoute.value = route
-            isInitialized = true
-        }
+        _backStack.clear()
+        _backStack.add(route)
+        _currentRoute.value = route
     }
 
     override fun getCurrentRouteFlow(): StateFlow<NavigationRoute?> = currentRoute
@@ -122,7 +136,6 @@ class NavigationManagerImpl @Inject constructor() : NavigationManager {
         _backStack.clear()
         _currentRoute.value = null
         _isAnimating.value = false
-        isInitialized = false
     }
 
     override fun navigateAndClearBackStack(route: NavigationRoute) {

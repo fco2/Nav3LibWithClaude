@@ -34,6 +34,7 @@ import com.chuka.nav3libwithclaude.presentation.humans.HumanScreen
 import com.chuka.nav3libwithclaude.presentation.humans.HumanViewModel
 
 @OptIn(ExperimentalAnimationApi::class)
+@androidx.annotation.RequiresPermission(android.Manifest.permission.POST_NOTIFICATIONS)
 @Composable
 fun CustomNavDisplay(
     navigationManager: NavigationManager,
@@ -129,16 +130,16 @@ fun CustomNavDisplay(
                         },
                         onNavigateToBoyScreen = { humanId ->
                             val transition = NavigationTransition(
-                                enterAnimation = NavigationAnimation.SLIDE_DOWN,
-                                exitAnimation = NavigationAnimation.SLIDE_UP,
+                                enterAnimation = NavigationAnimation.SLIDE_UP,
+                                exitAnimation = NavigationAnimation.SLIDE_DOWN,
                                 duration = 300
                             )
                             viewModel.navigateTo(NavigationRoute.BoyScreenRoute(humanId), transition)
                         },
                         onNavigateToGirlScreen = { humanId ->
                             val transition = NavigationTransition(
-                                enterAnimation = NavigationAnimation.SLIDE_DOWN,
-                                exitAnimation = NavigationAnimation.SLIDE_UP,
+                                enterAnimation = NavigationAnimation.FADE,
+                                exitAnimation = NavigationAnimation.SCALE,
                                 duration = 300
                             )
                             viewModel.navigateTo(NavigationRoute.GirlScreenRoute(humanId), transition)

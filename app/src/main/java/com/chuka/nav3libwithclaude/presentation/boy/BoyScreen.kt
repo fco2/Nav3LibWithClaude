@@ -19,6 +19,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chuka.nav3libwithclaude.domain.models.HumanType
 import com.chuka.nav3libwithclaude.domain.models.ToastData
 import com.chuka.nav3libwithclaude.presentation.navigation.NavigationRoute
+import com.chuka.nav3libwithclaude.presentation.util.HasAgeMates
 
 @Composable
 fun BoyScreen(
@@ -142,36 +143,45 @@ fun BoyScreen(
             Text(text = "Show Age Mates")
         }
 
-        LazyColumn {
-            items(boyUiState.ageMates) { mate ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp)
-                        .clickable {
-                            when (mate.gender) {
-                                HumanType.BOY -> onNavigateToBoyScreen(mate.id)
-                                HumanType.GIRL -> onNavigateToGirlScreen(mate.id)
-                                else -> onNavigateToBoyScreen(mate.id) // default
-                            }
-                        },
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                    )
-                ) {
-                    Column(
+        if (boyUiState.hasAgeMates == HasAgeMates.NO) {
+            Text(
+                text = "No age mates found",
+                modifier = Modifier.padding(16.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error
+            )
+        } else if (boyUiState.hasAgeMates == HasAgeMates.YES) {
+            LazyColumn {
+                items(boyUiState.ageMates) { mate ->
+                    Card(
                         modifier = Modifier
-                            .padding(16.dp)
                             .fillMaxWidth()
+                            .padding(8.dp)
+                            .clickable {
+                                when (mate.gender) {
+                                    HumanType.BOY -> onNavigateToBoyScreen(mate.id)
+                                    HumanType.GIRL -> onNavigateToGirlScreen(mate.id)
+                                    else -> onNavigateToBoyScreen(mate.id) // default
+                                }
+                            },
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                        )
                     ) {
-                        Text(
-                            text = mate.name ?: "Unknown",
-                            style = MaterialTheme.typography.headlineSmall
-                        )
-                        Text(
-                            text = mate.age.toString(),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Column(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth()
+                        ) {
+                            Text(
+                                text = mate.name ?: "Unknown",
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+                            Text(
+                                text = mate.age.toString(),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                     }
                 }
             }
