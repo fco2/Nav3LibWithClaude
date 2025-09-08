@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.chuka.nav3libwithclaude.data.entities.HumanEntity
 import com.chuka.nav3libwithclaude.domain.models.Human
 import com.chuka.nav3libwithclaude.domain.models.HumanType
@@ -26,6 +27,12 @@ interface HumanDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHumans(humans: List<HumanEntity>): List<Long?>
+
+    @Update
+    suspend fun updateHuman(human: HumanEntity)
+
+    @Update
+    suspend fun updateHumans(humans: List<HumanEntity>)
 
     @Delete
     suspend fun deleteHuman(human: HumanEntity)

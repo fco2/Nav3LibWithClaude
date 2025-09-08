@@ -27,12 +27,26 @@ class HumanViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HumanUiState())
     val uiState: StateFlow<HumanUiState> = _uiState.asStateFlow()
 
-    val humans = repository.getAllHumans()
+    private val _humans = MutableStateFlow<List<Human>>(emptyList())
+    val humans: StateFlow<List<Human>> = _humans.asStateFlow()
+
     val backStack: SnapshotStateList<NavigationRoute?> = navigationManager.backStack
     val currentRoute = navigationManager.getCurrentRouteFlow()
 
+    private val _dragState = MutableStateFlow(DragState())
+    val dragState: StateFlow<DragState> = _dragState.asStateFlow()
+
     init {
         initializeData()
+        collectHumans()
+    }
+
+    private fun collectHumans() {
+        viewModelScope.launch {
+            repository.getAllHumans().collect { humansList ->
+                _humans.value = humansList
+            }
+        }
     }
 
     private fun initializeData() {
@@ -93,15 +107,73 @@ class HumanViewModel @Inject constructor(
             toastLength = ToastData.LENGTH_SHORT
         )
     }
+
+    fun startDrag(index: Int) {
+        _dragState.value = _dragState.value.copy(
+            draggedIndex = index,
+            isDragInProgress = true,
+            dropTargetIndex = index
+        )
+    }
+
+    fun updateDrag(draggedIndex: Int, offset: Float) {
+        if (_dragState.value.draggedIndex == draggedIndex) {
+            val listSize = _humans.value.size
+            // Calculate drop target index with better accuracy
+            val cardPadding = 16f * 2 // Card internal padding
+            val itemContentHeight = 72f // Approximate content height
+            val itemSpacing = 8f // LazyColumn spacing
+            val totalItemHeight = itemContentHeight + cardPadding + itemSpacing
+
+            val positionChange = (offset / totalItemHeight).toInt()
+            val newTargetIndex = (draggedIndex + positionChange).coerceIn(0, listSize - 1)
+
+            _dragState.value = _dragState.value.copy(
+                dropTargetIndex = newTargetIndex
+            )
+        }
+    }
+
+    fun endDrag() {
+        val currentDragState = _dragState.value
+        val currentHumans = _humans.value
+
+        if (currentDragState.draggedIndex != -1 &&
+            currentDragState.dropTargetIndex != currentDragState.draggedIndex &&
+            currentHumans.isNotEmpty() &&
+            currentDragState.draggedIndex < currentHumans.size &&
+            currentDragState.dropTargetIndex < currentHumans.size
+        ) {
+            // Perform the reorder operation
+            viewModelScope.launch {
+                val mutableList = currentHumans.toMutableList()
+                val item = mutableList.removeAt(currentDragState.draggedIndex)
+                mutableList.add(currentDragState.dropTargetIndex, item)
+
+                repository.reorderHumans(mutableList)
+                _uiState.value = _uiState.value.copy(
+                    toastMessage = "Order updated successfully",
+                    toastBackgroundColor = 0xFF4CAF50,
+                )
+            }
+        }
+
+        // Reset drag state
+        _dragState.value = DragState()
+    }
+
+    fun cancelDrag() {
+        _dragState.value = DragState()
+    }
 }
 
 private fun buildSeedHumanData(): List<Human> = listOf(
-    Human(1L, "Alice", 24, HumanType.GIRL),
-    Human(2L, "Bob", 34, HumanType.BOY),
-    Human(3L, "Charlie", 22, HumanType.BOY),
-    Human(4L, "Diana", 24, HumanType.GIRL),
-    Human(5L, "Eve", 25, HumanType.GIRL),
-    Human(6L, "Frank", 30, HumanType.BOY)
+    Human(1L, "Alice", 24, HumanType.GIRL, rank = 6),
+    Human(2L, "Bob", 34, HumanType.BOY, rank = 5),
+    Human(3L, "Charlie", 22, HumanType.BOY, rank = 4),
+    Human(4L, "Diana", 24, HumanType.GIRL, rank = 3),
+    Human(5L, "Eve", 25, HumanType.GIRL, rank = 2),
+    Human(6L, "Frank", 30, HumanType.BOY, rank = 1)
 )
 
 data class HumanUiState(
@@ -109,6 +181,12 @@ data class HumanUiState(
     val toastBackgroundColor: Long? = null,
     val toastLength: Int = ToastData.LENGTH_SHORT,
     val shouldExitApp: ShouldExitApp = ShouldExitApp.NO
+)
+
+data class DragState(
+    val draggedIndex: Int = -1,
+    val isDragInProgress: Boolean = false,
+    val dropTargetIndex: Int = -1
 )
 
 enum class ShouldExitApp {

@@ -26,6 +26,8 @@ interface HumanRepository {
     fun getHumansBetweenAgeRange(age: Int): Flow<List<Human>>
 
     suspend fun getHighestRank(): Int
+
+    suspend fun reorderHumans(reorderedHumans: List<Human>)
 }
 
 class HumanRepositoryImpl @Inject constructor(private val humanDao: HumanDao) : HumanRepository{
@@ -80,5 +82,14 @@ class HumanRepositoryImpl @Inject constructor(private val humanDao: HumanDao) : 
 
     override suspend fun getHighestRank(): Int {
         return humanDao.getHighestRank()
+    }
+
+    override suspend fun reorderHumans(reorderedHumans: List<Human>) {
+        // Assign new ranks based on the order in the list (highest rank = first position)
+        val humansWithNewRanks = reorderedHumans.mapIndexed { index, human ->
+            human.copy(rank = reorderedHumans.size - index)
+        }
+
+        humanDao.updateHumans(humansWithNewRanks.map { it.toHumanEntity() })
     }
 }

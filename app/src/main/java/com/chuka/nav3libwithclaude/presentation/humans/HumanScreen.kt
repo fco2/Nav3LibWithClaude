@@ -43,19 +43,23 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chuka.nav3libwithclaude.domain.models.Human
@@ -83,7 +87,7 @@ fun HumanScreen(
 ) {
     val context = LocalContext.current
     val activity = context as ComponentActivity
-    val humans by viewModel.humans.collectAsStateWithLifecycle(initialValue = emptyList())
+    val humans by viewModel.humans.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val backStack = viewModel.backStack
 
@@ -217,14 +221,18 @@ fun HumanScreen(
 
             // Humans list
             Text(
-                text = "All Humans (${humans.size})",
+                text = "All Humans (${humans.size}) • Long-press drag handle to reorder",
                 style = MaterialTheme.typography.titleMedium
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            val dragState by viewModel.dragState.collectAsStateWithLifecycle()
+            var dragOffset by remember { mutableStateOf(Offset.Zero) }
+
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxSize()
             ) {
                 itemsIndexed(humans) { index, human ->
                     val route = when (human.gender) {
@@ -232,28 +240,90 @@ fun HumanScreen(
                         HumanType.GIRL -> NavigationRoute.GirlScreenRoute(human.id)
                         else -> NavigationRoute.BoyScreenRoute(human.id) // default
                     }
+
+                    val isBeingDragged = dragState.draggedIndex == index
+                    val isDropTarget =
+                        dragState.dropTargetIndex == index && dragState.isDragInProgress &&
+                            !isBeingDragged
+
+                    // Show drop indicator above the target position (when dragging down)
+                    if (isDropTarget && index < dragState.draggedIndex) {
+                        DropIndicator(isMovingDown = true)
+                    }
+
                     HumanItem(
                         human = human,
                         onDelete = { viewModel.deleteHuman(human) },
                         onHumanClick = { onNavigate(route) },
-                        modifier = Modifier,
-                        onSendNotification = {
-                            if (human.gender == HumanType.BOY) {
-                                human.id?.let {
-                                    notificationHelper.showBoyNotification(human.id, human.name.orEmpty()) {
-                                        Toast.makeText(context, "Notification permission denied", Toast.LENGTH_SHORT).show()
-                                    }
+                        modifier = Modifier
+                            .zIndex(if (isBeingDragged) 1f else 0f)
+                            .graphicsLayer {
+                                if (isBeingDragged) {
+                                    translationY = dragOffset.y
+                                    scaleX = 1.02f
+                                    scaleY = 1.02f
+                                    alpha = 0.9f
                                 }
-                            } else {
-                                human.id?.let {
-                                    notificationHelper.showGirlNotification(human.id, human.name.orEmpty()) {
-                                        Toast.makeText(context, "Notification permission denied", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-
                             }
+                            .animateItem(),
+                        onSendNotification = {
+                            handleNotificationWithPermission {
+                                if (human.gender == HumanType.BOY) {
+                                    human.id?.let {
+                                        notificationHelper.showBoyNotification(
+                                            human.id,
+                                            human.name.orEmpty()
+                                        ) {
+                                            Toast.makeText(
+                                                context,
+                                                "Notification permission denied",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                } else {
+                                    human.id?.let {
+                                        notificationHelper.showGirlNotification(
+                                            human.id,
+                                            human.name.orEmpty()
+                                        ) {
+                                            Toast.makeText(
+                                                context,
+                                                "Notification permission denied",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+
+                                }
+                            }
+                        },
+                        isDragging = isBeingDragged,
+                        isDragInProgress = dragState.isDragInProgress,
+                        isDropTarget = isDropTarget,
+                        onDragStart = {
+                            viewModel.startDrag(index)
+                            dragOffset = Offset.Zero
+                        },
+                        onDrag = { offset ->
+                            if (dragState.draggedIndex == index) {
+                                dragOffset = offset
+                                viewModel.updateDrag(index, offset.y)
+                            }
+                        },
+                        onDragEnd = {
+                            if (dragState.draggedIndex == index) {
+                                viewModel.endDrag()
+                            }
+                            dragOffset = Offset.Zero
                         }
                     )
+
+                    // Show drop indicator below the target position
+                    if (isDropTarget && index > dragState.draggedIndex) {
+                        DropIndicator(isMovingDown = false)
+                    }
+                    // Add spacer after last item
                     if (index == humans.lastIndex) {
                         Spacer(modifier = Modifier.height(32.dp))
                     }
@@ -263,15 +333,51 @@ fun HumanScreen(
 
         // Permission request dialog
         if (showPermissionDialog) {
-            val pair = requestPermissionDialog(
-                true,
-                pendingNotificationAction,
-                activity,
-                permissionHandler,
-                context
+            AlertDialog(
+                onDismissRequest = {
+                    showPermissionDialog = false
+                    pendingNotificationAction = null
+                },
+                title = { Text("Notification Permission") },
+                text = {
+                    Text(
+                        "This app needs notification permission to send you deep link notifications. " +
+                                "Grant permission to test the notification features."
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            permissionHandler.requestNotificationPermission(context) { granted ->
+                                showPermissionDialog = false
+                                if (granted) {
+                                    pendingNotificationAction?.invoke()
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Permission denied. You can enable it in Settings.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                                pendingNotificationAction = null
+                            }
+                        }
+                    ) {
+                        Text("Grant Permission")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showPermissionDialog = false
+                            pendingNotificationAction = null
+                            Toast.makeText(context, "Permission denied", Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
             )
-            pendingNotificationAction = pair.first
-            showPermissionDialog = pair.second
         }
 
         // Add Human Dialog
@@ -316,64 +422,6 @@ fun HumanScreen(
             }
         )
     }
-}
-
-@Composable
-private fun requestPermissionDialog(
-    showPermissionDialog: Boolean,
-    pendingNotificationAction: (() -> Unit)?,
-    activity: ComponentActivity,
-    permissionHandler: NotificationPermissionHandler,
-    context: ComponentActivity
-): Pair<(() -> Unit)?, Boolean> {
-    var showPermissionDialog1 = showPermissionDialog
-    var pendingNotificationAction1 = pendingNotificationAction
-    AlertDialog(
-        onDismissRequest = {
-            showPermissionDialog1 = false
-            pendingNotificationAction1 = null
-        },
-        title = { Text("Notification Permission") },
-        text = {
-            Text("This app needs notification permission to send you deep link notifications. " +
-                    "Grant permission to test the notification features.")
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    activity.let { act ->
-                        permissionHandler.requestNotificationPermission(context) { granted ->
-                            showPermissionDialog1 = false
-                            if (granted) {
-                                pendingNotificationAction1?.invoke()
-                            } else {
-                                Toast.makeText(
-                                    context,
-                                    "Permission denied. You can enable it in Settings.",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                            pendingNotificationAction1 = null
-                        }
-                    }
-                }
-            ) {
-                Text("Grant Permission")
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = {
-                    showPermissionDialog1 = false
-                    pendingNotificationAction1 = null
-                    Toast.makeText(context, "Permission denied", Toast.LENGTH_SHORT).show()
-                }
-            ) {
-                Text("Cancel")
-            }
-        }
-    )
-    return Pair(pendingNotificationAction1, showPermissionDialog1)
 }
 
 @Composable
@@ -464,12 +512,55 @@ fun HumanItem(
     onDelete: () -> Unit,
     onHumanClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onSendNotification: (Long) -> Unit
+    onSendNotification: () -> Unit,
+    isDragging: Boolean = false,
+    isDragInProgress: Boolean = false,
+    isDropTarget: Boolean = false,
+    onDragStart: () -> Unit = {},
+    onDrag: (Offset) -> Unit = {},
+    onDragEnd: () -> Unit = {}
 ) {
+    var cumulativeOffset by remember { mutableStateOf(Offset.Zero) }
+
+    // Reset cumulative offset when drag starts
+    LaunchedEffect(isDragging) {
+        if (isDragging) {
+            cumulativeOffset = Offset.Zero
+        }
+    }
+
     Card(
         modifier = modifier
-            .fillMaxWidth(),
-        onClick = { onHumanClick() }
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = {
+                        cumulativeOffset = Offset.Zero
+                        onDragStart()
+                    },
+                    onDragEnd = {
+                        onDragEnd()
+                    },
+                    onDragCancel = {
+                        onDragEnd()
+                    }
+                ) { change, dragAmount ->
+                    cumulativeOffset += dragAmount
+                    onDrag(cumulativeOffset)
+                    change.consume()
+                }
+            },
+        onClick = { if (!isDragInProgress) onHumanClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = when {
+                isDragging -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
+                isDropTarget -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                else -> MaterialTheme.colorScheme.surfaceContainer
+            }
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isDragging) 8.dp else if (isDropTarget) 4.dp else 2.dp
+        )
     ) {
         Row(
             modifier = Modifier
@@ -483,19 +574,13 @@ fun HumanItem(
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
-                        .width(30.dp)
-                        .padding(horizontal = 1.dp, vertical = 1.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                        .pointerInput(Unit) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = { },
-                                onDragEnd = { },
-                                onDragCancel = { },
-                            ) { change, dragAmount ->
-                                change.consume()
-                            }
-                        },
+                        .width(32.dp)
+                        .background(
+                            if (isDragging)
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                            else
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     // Grid pattern like Google Keep (3x6 dots)
@@ -539,12 +624,17 @@ fun HumanItem(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Text(
+                        text = "Rank: ${human.rank}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
 
             Row {
-                IconButton(onClick = { human.id?.let { onSendNotification(it) } }) {
+                IconButton(onClick = onSendNotification) {
                     Icon(
                         imageVector = Icons.Filled.Notifications,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -563,3 +653,52 @@ fun HumanItem(
     }
 }
 
+@Composable
+fun DropIndicator(isMovingDown: Boolean) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(6.dp)
+            .padding(horizontal = 16.dp)
+            .background(
+                MaterialTheme.colorScheme.primary,
+                RoundedCornerShape(3.dp)
+            )
+    ) {
+        // Add directional indicator dots
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = if (isMovingDown) Arrangement.End else Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Show directional dots
+            if (isMovingDown) {
+                // Moving down - show arrow pointing down
+                repeat(3) { index ->
+                    Box(
+                        modifier = Modifier
+                            .size((4 + index).dp)
+                            .background(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 1f - (index * 0.2f)),
+                                RoundedCornerShape(50.dp)
+                            )
+                    )
+                    if (index < 2) Spacer(modifier = Modifier.width(2.dp))
+                }
+            } else {
+                // Moving up - show arrow pointing up
+                repeat(3) { index ->
+                    Box(
+                        modifier = Modifier
+                            .size((6 - index).dp)
+                            .background(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 1f - (index * 0.2f)),
+                                RoundedCornerShape(50.dp)
+                            )
+                    )
+                    if (index < 2) Spacer(modifier = Modifier.width(2.dp))
+                }
+            }
+        }
+    }
+}
